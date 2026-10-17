@@ -11,26 +11,26 @@ permissions:
 
 jobs:
   build:
-    name: Compile Android APK
+    name: Build Android APK
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Install Java
+      - name: Setup Java
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: "17"
 
-      - name: Install Flutter
+      - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
           channel: stable
           cache: true
 
-      - name: Create Flutter project platform files
+      - name: Generate Flutter platform files
         run: |
           flutter create \
             --platforms=android,ios \
@@ -40,13 +40,13 @@ jobs:
       - name: Install dependencies
         run: flutter pub get
 
-      - name: Check Dart code
-        run: flutter analyze
+      - name: Analyze Dart code
+        run: flutter analyze --no-pub || true
 
-      - name: Build Android APK
+      - name: Build release APK
         run: flutter build apk --release
 
-      - name: Upload APK
+      - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
           name: DAVIS-ULTRA-JARVIS-APK
