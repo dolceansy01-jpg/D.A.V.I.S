@@ -1,5 +1,8 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:http/http.dart' as http;
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -46,16 +49,23 @@ class DavisHomePage extends StatefulWidget {
 }
 
 class _DavisHomePageState extends State<DavisHomePage> {
-  final TextEditingController _controller = TextEditingController();
+  static const String serverUrl =
+      'https://d-a-v-i-s.onrender.com/chat';
+
+  final TextEditingController _controller =
+      TextEditingController();
+
+  final ScrollController _scrollController =
+      ScrollController();
 
   final List<Map<String, String>> _messages = [];
 
   bool _loading = false;
 
-  void _sendMessage() {
+  Future<void> _sendMessage() async {
     final message = _controller.text.trim();
 
-    if (message.isEmpty) return;
+    if (message.isEmpty || _loading) return;
 
     setState(() {
       _messages.add({
@@ -63,21 +73,90 @@ class _DavisHomePageState extends State<DavisHomePage> {
         'text': message,
       });
 
+      _loading = true;
+      _controller.clear();
+    });
+
+    _scrollToBottom();
+
+    try {
+      final response = await http
+          .post(
+            Uri.parse(serverUrl),
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: jsonEncode({
+              'message': message,
+            }),
+          )
+          .timeout(const Duration(seconds: 90));
+
+      final dynamic decoded = jsonDecode(response.body);
+
+      if (response.statusCode >= 200 &&
+          response.statusCode < 300 &&
+          decoded is Map &&
+          decoded['reply'] is String) {
+        if (!mounted) return;
+
+        setState(() {
+          _messages.add({
+            'role': 'assistant',
+            'text': decoded['reply'] as String,
+          });
+        });
+      } else {
+        final errorMessage =
+            decoded is Map && decoded['error'] is String
+                ? decoded['error'] as String
+                : 'Le serveur a renvoyé une réponse inattendue.';
+
+        _addError(errorMessage);
+      }
+    } catch (e) {
+      _addError(
+        'Impossible de contacter D.A.V.I.S. '
+        'Vérifie ta connexion Internet et réessaie.',
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _loading = false;
+        });
+
+        _scrollToBottom();
+      }
+    }
+  }
+
+  void _addError(String message) {
+    if (!mounted) return;
+
+    setState(() {
       _messages.add({
         'role': 'assistant',
-        'text':
-            'Bonjour Kim Dolce ! Je suis D.A.V.I.S. '
-            'Mon interface est prête. Mon intelligence artificielle '
-            'doit encore être connectée à un serveur.',
+        'text': message,
       });
+    });
+  }
 
-      _controller.clear();
+  void _scrollToBottom() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_scrollController.hasClients) {
+        _scrollController.animateTo(
+          _scrollController.position.maxScrollExtent,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeOut,
+        );
+      }
     });
   }
 
   @override
   void dispose() {
     _controller.dispose();
+    _scrollController.dispose();
     super.dispose();
   }
 
@@ -119,11 +198,11 @@ class _DavisHomePageState extends State<DavisHomePage> {
       ),
       body: Column(
         children: [
-          const SizedBox(height: 35),
+          const SizedBox(height: 25),
 
           Container(
-            width: 145,
-            height: 145,
+            width: 125,
+            height: 125,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               gradient: const LinearGradient(
@@ -144,12 +223,12 @@ class _DavisHomePageState extends State<DavisHomePage> {
             ),
             child: const Icon(
               Icons.graphic_eq,
-              size: 75,
+              size: 65,
               color: Colors.white,
             ),
           ),
 
-          const SizedBox(height: 18),
+          const SizedBox(height: 15),
 
           const Text(
             'BONJOUR, KIM DOLCE',
@@ -161,22 +240,50 @@ class _DavisHomePageState extends State<DavisHomePage> {
             ),
           ),
 
-          const SizedBox(height: 8),
+          const SizedBox(height: 6),
 
           const Text(
             'Votre assistant personnel',
             style: TextStyle(color: Colors.white60),
           ),
 
-          const SizedBox(height: 20),
-
           Expanded(
             child: ListView.builder(
+              controller: _scrollController,
               padding: const EdgeInsets.all(16),
-              itemCount: _messages.length,
+              itemCount: _messages.length + (_loading ? 1 : 0),
               itemBuilder: (context, index) {
-                final message = _messages[index];
-                final isUser = message['role'] == 'user';
+                if (_loading && index == _messages.length) {
+                  return const Align(
+                    alignment: Alignment.centerLeft,
+                    child: Padding(
+                      padding: EdgeInsets.all(12),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Color(0xFF00D9FF),
+                            ),
+                          ),
+                          SizedBox(width: 12),
+                          Text(
+                            'D.A.V.I.S. réfléchit...',
+                            style: TextStyle(
+                              color: Color(0xFF00D9FF),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                }
+
+                final item = _messages[index];
+                final isUser = item['role'] == 'user';
 
                 return Align(
                   alignment: isUser
@@ -199,7 +306,7 @@ class _DavisHomePageState extends State<DavisHomePage> {
                             .withValues(alpha: 0.5),
                       ),
                     ),
-                    child: Text(message['text'] ?? ''),
+                    child: Text(item['text'] ?? ''),
                   ),
                 );
               },
@@ -215,6 +322,8 @@ class _DavisHomePageState extends State<DavisHomePage> {
                   Expanded(
                     child: TextField(
                       controller: _controller,
+                      enabled: !_loading,
+                      textInputAction: TextInputAction.send,
                       onSubmitted: (_) => _sendMessage(),
                       decoration: InputDecoration(
                         hintText: 'Écrivez à D.A.V.I.S...',
@@ -231,7 +340,7 @@ class _DavisHomePageState extends State<DavisHomePage> {
                   CircleAvatar(
                     backgroundColor: const Color(0xFF00A9E8),
                     child: IconButton(
-                      onPressed: _sendMessage,
+                      onPressed: _loading ? null : _sendMessage,
                       icon: const Icon(
                         Icons.send,
                         color: Colors.white,
