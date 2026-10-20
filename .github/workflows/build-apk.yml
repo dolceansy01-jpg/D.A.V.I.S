@@ -1,55 +1,56 @@
-name: Build DAVIS Android APK
+name: Build Android APK
 
 on:
-  workflow_dispatch:
   push:
     branches:
       - main
+  workflow_dispatch:
 
 permissions:
   contents: read
 
 jobs:
   build:
-    name: Build Android APK
+    name: Compile Android APK
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Setup Java
+      - name: Install Java
         uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: "17"
+          java-version: '17'
 
-      - name: Setup Flutter
+      - name: Install Flutter
         uses: subosito/flutter-action@v2
         with:
           channel: stable
           cache: true
 
-      - name: Generate Flutter platform files
+      - name: Create Flutter platform files if missing
         run: |
-          flutter create \
-            --platforms=android,ios \
-            --project-name=davis_ultra_jarvis \
-            .
+          if [ ! -f android/gradlew ]; then
+            flutter create --platforms=android .
+          fi
 
       - name: Install dependencies
         run: flutter pub get
 
       - name: Analyze Dart code
-        run: flutter analyze --no-pub || true
+        run: flutter analyze --no-fatal-infos --no-fatal-warnings
+
+      - name: Run Flutter tests
+        run: flutter test
 
       - name: Build release APK
         run: flutter build apk --release
 
-      - name: Upload APK artifact
+      - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: DAVIS-ULTRA-JARVIS-APK
           path: build/app/outputs/flutter-apk/app-release.apk
           if-no-files-found: error
-          retention-days: 7
