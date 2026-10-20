@@ -1,26 +1,26 @@
-name: davis
-description: "D.A.V.I.S. ULTRA JARVIS AI - Assistant personnel de Kim Dolce"
+name: davis_ultra_jarvis
+description: D.A.V.I.S. Ultra Jarvis AI personal assistant.
 publish_to: 'none'
 
 version: 1.0.0+1
 
 environment:
-  sdk: '>=3.4.0 <4.0.0'
+  sdk: '>=3.5.0 <4.0.0'
 
 dependencies:
   flutter:
     sdk: flutter
 
   cupertino_icons: ^1.0.8
-
-  # Connexion au serveur IA D.A.V.I.S.
   http: ^1.5.0
+  flutter_tts: ^4.2.3
+  speech_to_text: ^7.3.0
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
 
-  flutter_lints: ^4.0.0
+  flutter_lints: ^5.0.0
 
 flutter:
   uses-material-design: true
