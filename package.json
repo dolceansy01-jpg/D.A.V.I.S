@@ -1,8 +1,7 @@
 {
   "name": "davis-ultra-jarvis-server",
   "version": "1.0.0",
-  "private": true,
-  "description": "D.A.V.I.S. AI assistant backend",
+  "description": "Backend IA de D.A.V.I.S. ULTRA JARVIS",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"
@@ -11,6 +10,6 @@
     "node": ">=20"
   },
   "dependencies": {
-    "express": "^5.1.0"
+    "express": "^4.21.2"
   }
 }
