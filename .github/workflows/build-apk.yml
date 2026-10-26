@@ -1,56 +1,44 @@
-name: Build Android APK
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"><uses-permission android:name="android.permission.INTERNET" />
+<uses-permission android:name="android.permission.RECORD_AUDIO" />
 
-on:
-  push:
-    branches:
-      - main
-  workflow_dispatch:
+<queries>
+    <intent>
+        <action android:name="android.speech.RecognitionService" />
+    </intent>
+    <intent>
+        <action android:name="android.intent.action.TTS_SERVICE" />
+    </intent>
+</queries>
 
-permissions:
-  contents: read
+<application
+    android:label="D.A.V.I.S. ULTRA JARVIS"
+    android:name="${applicationName}"
+    android:icon="@mipmap/ic_launcher">
 
-jobs:
-  build:
-    name: Compile Android APK
-    runs-on: ubuntu-latest
+    <activity
+        android:name=".MainActivity"
+        android:exported="true"
+        android:launchMode="singleTop"
+        android:theme="@style/LaunchTheme"
+        android:configChanges="orientation|keyboardHidden|keyboard|screenSize|smallestScreenSize|locale|layoutDirection|fontScale|screenLayout|density|uiMode"
+        android:hardwareAccelerated="true"
+        android:windowSoftInputMode="adjustResize">
 
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+        <meta-data
+            android:name="io.flutter.embedding.android.NormalTheme"
+            android:resource="@style/NormalTheme" />
 
-      - name: Install Java
-        uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: '17'
+        <intent-filter>
+            <action android:name="android.intent.action.MAIN" />
+            <category android:name="android.intent.category.LAUNCHER" />
+        </intent-filter>
 
-      - name: Install Flutter
-        uses: subosito/flutter-action@v2
-        with:
-          channel: stable
-          cache: true
+    </activity>
 
-      - name: Create Flutter platform files if missing
-        run: |
-          if [ ! -f android/gradlew ]; then
-            flutter create --platforms=android .
-          fi
+    <meta-data
+        android:name="flutterEmbedding"
+        android:value="2" />
 
-      - name: Install dependencies
-        run: flutter pub get
+</application>
 
-      - name: Analyze Dart code
-        run: flutter analyze --no-fatal-infos --no-fatal-warnings
-
-      - name: Run Flutter tests
-        run: flutter test
-
-      - name: Build release APK
-        run: flutter build apk --release
-
-      - name: Upload APK
-        uses: actions/upload-artifact@v4
-        with:
-          name: DAVIS-ULTRA-JARVIS-APK
-          path: build/app/outputs/flutter-apk/app-release.apk
-          if-no-files-found: error
+</manifest>
